@@ -29,6 +29,7 @@ import android.net.ConnectivityManager
 import android.os.Binder
 import android.os.Build
 import android.os.Bundle
+import androidx.annotation.RequiresApi
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
@@ -278,7 +279,11 @@ class MusicService :
     lateinit var listenTogetherManager: com.metrolist.music.listentogether.ListenTogetherManager
 
     private lateinit var audioManager: AudioManager
-    private var audioFocusRequest: AudioFocusRequest? = null
+    private var audioFocusRequest: Any? = null
+    private val audioFocusChangeListener =
+        AudioManager.OnAudioFocusChangeListener { focusChange ->
+            handleAudioFocusChange(focusChange)
+        }
     private var lastAudioFocusState = AudioManager.AUDIOFOCUS_NONE
     private var wasPlayingBeforeAudioFocusLoss = false
     private var hasAudioFocus = false
@@ -631,7 +636,9 @@ class MusicService :
         Timber.tag(TAG).d("Player successfully initialized")
 
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        setupAudioFocusRequest()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            setupAudioFocusRequest()
+        }
 
         mediaLibrarySessionCallback.apply {
             service = this@MusicService
@@ -1286,6 +1293,7 @@ class MusicService :
         return player
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun setupAudioFocusRequest() {
         audioFocusRequest =
             AudioFocusRequest
@@ -1296,9 +1304,8 @@ class MusicService :
                         .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
                         .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
                         .build(),
-                ).setOnAudioFocusChangeListener { focusChange ->
-                    handleAudioFocusChange(focusChange)
-                }.setAcceptsDelayedFocusGain(true)
+                ).setOnAudioFocusChangeListener(audioFocusChangeListener)
+                .setAcceptsDelayedFocusGain(true)
                 .build()
     }
 
@@ -1372,20 +1379,35 @@ class MusicService :
     private fun requestAudioFocus(): Boolean {
         if (hasAudioFocus) return true
 
-        audioFocusRequest?.let { request ->
-            val result = audioManager.requestAudioFocus(request)
-            hasAudioFocus = result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
-            return hasAudioFocus
-        }
-        return false
+        val result =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                (audioFocusRequest as? AudioFocusRequest)?.let { request ->
+                    audioManager.requestAudioFocus(request)
+                } ?: AudioManager.AUDIOFOCUS_REQUEST_FAILED
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.requestAudioFocus(
+                    audioFocusChangeListener,
+                    AudioManager.STREAM_MUSIC,
+                    AudioManager.AUDIOFOCUS_GAIN,
+                )
+            }
+
+        hasAudioFocus = result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+        return hasAudioFocus
     }
 
     private fun abandonAudioFocus() {
         if (hasAudioFocus) {
-            audioFocusRequest?.let { request ->
-                audioManager.abandonAudioFocusRequest(request)
-                hasAudioFocus = false
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                (audioFocusRequest as? AudioFocusRequest)?.let { request ->
+                    audioManager.abandonAudioFocusRequest(request)
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.abandonAudioFocus(audioFocusChangeListener)
             }
+            hasAudioFocus = false
         }
     }
 
@@ -3764,14 +3786,16 @@ class MusicService :
         )
 
     private fun ensureForegroundChannelExists() {
-        val nm = getSystemService(NotificationManager::class.java)
-        nm?.createNotificationChannel(
-            NotificationChannel(
-                CHANNEL_ID,
-                getString(R.string.music_player),
-                NotificationManager.IMPORTANCE_LOW,
-            ),
-        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val nm = getSystemService(NotificationManager::class.java)
+            nm?.createNotificationChannel(
+                NotificationChannel(
+                    CHANNEL_ID,
+                    getString(R.string.music_player),
+                    NotificationManager.IMPORTANCE_LOW,
+                ),
+            )
+        }
     }
 
     private fun createFallbackForegroundNotification(): Notification {

@@ -316,15 +316,17 @@ class MusicRecognizerWidgetService : Service() {
     }
 
     private fun createNotificationChannel() {
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            getString(R.string.widget_recognizer_channel_name),
-            NotificationManager.IMPORTANCE_LOW
-        ).apply {
-            description = getString(R.string.widget_recognizer_channel_desc)
-            setShowBadge(false)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                getString(R.string.widget_recognizer_channel_name),
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = getString(R.string.widget_recognizer_channel_desc)
+                setShowBadge(false)
+            }
+            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
-        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
     // ─── Constants ────────────────────────────────────────────────────────────
