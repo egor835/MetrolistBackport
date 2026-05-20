@@ -1,6 +1,8 @@
-<div align="center">
+i hope it will work...
 
-<img src="https://github.com/MetrolistGroup/Metrolist/blob/main/fastlane/metadata/android/en-US/images/icon.png" alt="Metrolist app icon" width="200" />
+...somehow
+
+please don't hate me, i don't know how to code
 
 # Metrolist
 
@@ -321,6 +323,5 @@ All trademarks, service marks, and intellectual property rights referenced in th
 
 **Made with ❤️ by [Mo Agamy](https://github.com/mostafaalagamy)**
 
-**This project stands with Palestine 🇵🇸**
-
 </div>
+=======
