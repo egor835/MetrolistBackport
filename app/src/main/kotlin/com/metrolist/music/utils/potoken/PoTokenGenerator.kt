@@ -89,7 +89,11 @@ class PoTokenGenerator {
         val (poTokenGenerator, streamingPot, hasBeenRecreated) =
             webPoTokenGenLock.withLock {
                 val shouldRecreate =
-                    forceRecreate || webPoTokenGenerator == null || webPoTokenGenerator!!.isExpired || webPoTokenSessionId != sessionId
+                    forceRecreate || webPoTokenGenerator == null || webPoTokenGenerator!!.isExpired ||
+                        // Renderer died (OOM kill) — recreate proactively instead of letting the
+                        // first post-crash generatePoToken() fail against the dead instance.
+                        webPoTokenGenerator!!.isDead ||
+                        webPoTokenSessionId != sessionId
 
                 if (shouldRecreate) {
                     Timber.tag(TAG).d("Creating new PoTokenWebView (forceRecreate=$forceRecreate)")
@@ -127,8 +131,11 @@ class PoTokenGenerator {
             }
         }
 
-        Timber.tag(TAG).d("poToken generated successfully: player=${playerPot.take(20)}..., streaming=${streamingPot.take(20)}...")
+        Timber.tag(TAG).d("poToken generated successfully: session=${streamingPot.take(20)}..., video=${playerPot.take(20)}...")
 
-        return PoTokenResult(playerPot, streamingPot)
+        return PoTokenResult(
+            playerRequestPoToken = streamingPot,
+            streamingDataPoToken = playerPot,
+        )
     }
 }
