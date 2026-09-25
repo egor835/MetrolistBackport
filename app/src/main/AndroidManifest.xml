@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-sdk tools:overrideLibrary="androidx.compose.material3, androidx.compose.material3.ripple, androidx.compose.foundation, androidx.compose.foundation.layout, androidx.compose.ui, androidx.compose.ui.geometry, androidx.compose.ui.graphics, androidx.compose.ui.text, androidx.compose.ui.unit, androidx.compose.ui.util, androidx.compose.animation, androidx.compose.animation.core, androidx.compose.runtime, androidx.compose.runtime.annotation, androidx.compose.runtime.retain, androidx.compose.runtime.saveable" />
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />

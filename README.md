@@ -1,3 +1,5 @@
+i'm just a larper with google gemini, don't take it seriously
+
 <div align="center">
 
 <img src="fastlane/metadata/android/en-US/images/icon.png" alt="Metrolist app icon" width="200" />

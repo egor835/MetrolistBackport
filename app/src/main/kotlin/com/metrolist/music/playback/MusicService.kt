@@ -34,6 +34,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.datastore.preferences.core.Preferences
 import androidx.core.app.ServiceCompat
@@ -1362,7 +1363,18 @@ class MusicService :
         return player
     }
 
+    private val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
+        handleAudioFocusChange(focusChange)
+    }
+
     private fun setupAudioFocusRequest() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            setupAudioFocusRequestApi26()
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun setupAudioFocusRequestApi26() {
         audioFocusRequest =
             AudioFocusRequest
                 .Builder(AudioManager.AUDIOFOCUS_GAIN)
@@ -1372,9 +1384,8 @@ class MusicService :
                         .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
                         .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
                         .build(),
-                ).setOnAudioFocusChangeListener { focusChange ->
-                    handleAudioFocusChange(focusChange)
-                }.setAcceptsDelayedFocusGain(true)
+                ).setOnAudioFocusChangeListener(audioFocusChangeListener)
+                .setAcceptsDelayedFocusGain(true)
                 .build()
     }
 
@@ -1447,6 +1458,21 @@ class MusicService :
     private fun requestAudioFocus(): Boolean {
         if (hasAudioFocus) return true
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            return requestAudioFocusApi26()
+        } else {
+            val result = audioManager.requestAudioFocus(
+                audioFocusChangeListener,
+                AudioManager.STREAM_MUSIC,
+                AudioManager.AUDIOFOCUS_GAIN,
+            )
+            hasAudioFocus = result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+            return hasAudioFocus
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun requestAudioFocusApi26(): Boolean {
         audioFocusRequest?.let { request ->
             val result = audioManager.requestAudioFocus(request)
             hasAudioFocus = result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
@@ -1456,11 +1482,19 @@ class MusicService :
     }
 
     private fun abandonAudioFocus() {
-        if (hasAudioFocus) {
-            audioFocusRequest?.let { request ->
-                audioManager.abandonAudioFocusRequest(request)
-                hasAudioFocus = false
-            }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            abandonAudioFocusApi26()
+        } else {
+            audioManager.abandonAudioFocus(audioFocusChangeListener)
+            hasAudioFocus = false
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun abandonAudioFocusApi26() {
+        audioFocusRequest?.let { request ->
+            audioManager.abandonAudioFocusRequest(request)
+            hasAudioFocus = false
         }
     }
 
@@ -4180,6 +4214,7 @@ class MusicService :
         )
 
     private fun ensureForegroundChannelExists() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val nm = getSystemService(NotificationManager::class.java)
         nm?.createNotificationChannel(
             NotificationChannel(
