@@ -10,6 +10,7 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.os.Build
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -61,6 +62,10 @@ class NetworkConnectivityObserver(context: Context) {
      */
     fun isCurrentlyConnected(): Boolean {
         return try {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                @Suppress("DEPRECATION")
+                return connectivityManager.activeNetworkInfo?.isConnected == true
+            }
             val activeNetwork = connectivityManager.activeNetwork
             val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
             

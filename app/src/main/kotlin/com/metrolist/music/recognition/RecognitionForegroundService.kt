@@ -17,6 +17,7 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.app.ServiceCompat
 import coil3.ImageLoader
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
@@ -102,7 +103,7 @@ class RecognitionForegroundService : Service() {
         statusJob?.cancel()
         pulseJob?.cancel()
         serviceScope.cancel()
-        if (!keepNotificationOnStop) stopForeground(STOP_FOREGROUND_REMOVE)
+        if (!keepNotificationOnStop) ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         super.onDestroy()
     }
 
@@ -319,7 +320,7 @@ class RecognitionForegroundService : Service() {
                 } finally {
                     pulseJob?.cancel()
                     updateAllWidgets()
-                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    ServiceCompat.stopForeground(this@RecognitionForegroundService, ServiceCompat.STOP_FOREGROUND_REMOVE)
                     stopSelf()
                 }
             }
@@ -388,7 +389,7 @@ class RecognitionForegroundService : Service() {
         saveWidgetState(STATE_IDLE)
         widgetPreferences().edit().putInt(PREF_PULSE_FRAME, 0).apply()
         updateAllWidgets()
-        stopForeground(STOP_FOREGROUND_REMOVE)
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
@@ -501,7 +502,7 @@ class RecognitionForegroundService : Service() {
 
     private fun finishWithPersistentResult() {
         keepNotificationOnStop = true
-        stopForeground(STOP_FOREGROUND_DETACH)
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_DETACH)
         stopSelf()
     }
 

@@ -24,6 +24,7 @@ import android.provider.MediaStore
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
+import android.text.TextUtils
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.graphics.createBitmap
@@ -235,21 +236,9 @@ object ComposeToImage {
                     isAntiAlias = true
                 }
 
-            val titleLayout =
-                StaticLayout.Builder
-                    .obtain(songTitle, 0, songTitle.length, titlePaint, textMaxWidth.toInt())
-                    .setAlignment(Layout.Alignment.ALIGN_NORMAL)
-                    .setMaxLines(1)
-                    .setEllipsize(android.text.TextUtils.TruncateAt.END)
-                    .build()
+            val titleLayout = singleLineLayout(songTitle, titlePaint, textMaxWidth.toInt())
 
-            val artistLayout =
-                StaticLayout.Builder
-                    .obtain(artistName, 0, artistName.length, artistPaint, textMaxWidth.toInt())
-                    .setAlignment(Layout.Alignment.ALIGN_NORMAL)
-                    .setMaxLines(1)
-                    .setEllipsize(android.text.TextUtils.TruncateAt.END)
-                    .build()
+            val artistLayout = singleLineLayout(artistName, artistPaint, textMaxWidth.toInt())
 
             // Vertically align text block with cover art
             val headerTextHeight = titleLayout.height + artistLayout.height + (2f * scale) // +2dp padding between title and artist
@@ -337,13 +326,7 @@ object ComposeToImage {
 
             while (lyricsTextSize > minLyricsSize) {
                 lyricsPaint.textSize = lyricsTextSize
-                lyricsLayout =
-                    StaticLayout.Builder
-                        .obtain(lyrics, 0, lyrics.length, lyricsPaint, lyricsWidth.toInt())
-                        .setAlignment(lyricsAlignment)
-                        .setLineSpacing(0f, 1.2f)
-                        .setIncludePad(false)
-                        .build()
+                lyricsLayout = lyricsStaticLayout(lyrics, lyricsPaint, lyricsWidth.toInt(), lyricsAlignment)
 
                 if (lyricsLayout.height <= lyricsHeight) {
                     break
@@ -354,13 +337,7 @@ object ComposeToImage {
 
             // One final rebuild with the determined size
             lyricsPaint.textSize = lyricsTextSize
-            lyricsLayout =
-                StaticLayout.Builder
-                    .obtain(lyrics, 0, lyrics.length, lyricsPaint, lyricsWidth.toInt())
-                    .setAlignment(lyricsAlignment)
-                    .setLineSpacing(0f, 1.2f)
-                    .setIncludePad(false)
-                    .build()
+            lyricsLayout = lyricsStaticLayout(lyrics, lyricsPaint, lyricsWidth.toInt(), lyricsAlignment)
 
             // Center vertically in the available space
             val lyricsContentHeight = lyricsLayout.height
@@ -386,6 +363,43 @@ object ComposeToImage {
     // Android port : Yahel Bouaziz <yahel at kayenko.com>
     // http://www.kayenko.com
     // ported to Kotlin and adapted
+    // StaticLayout.Builder is API 23+; below that fall back to the equivalent legacy constructor.
+    private fun singleLineLayout(
+        text: CharSequence,
+        paint: TextPaint,
+        width: Int,
+    ): StaticLayout =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            StaticLayout.Builder
+                .obtain(text, 0, text.length, paint, width)
+                .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                .setMaxLines(1)
+                .setEllipsize(TextUtils.TruncateAt.END)
+                .build()
+        } else {
+            val ellipsized = TextUtils.ellipsize(text, paint, width.toFloat(), TextUtils.TruncateAt.END)
+            @Suppress("DEPRECATION")
+            StaticLayout(ellipsized, paint, width, Layout.Alignment.ALIGN_NORMAL, 1f, 0f, true)
+        }
+
+    private fun lyricsStaticLayout(
+        text: CharSequence,
+        paint: TextPaint,
+        width: Int,
+        alignment: Layout.Alignment,
+    ): StaticLayout =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            StaticLayout.Builder
+                .obtain(text, 0, text.length, paint, width)
+                .setAlignment(alignment)
+                .setLineSpacing(0f, 1.2f)
+                .setIncludePad(false)
+                .build()
+        } else {
+            @Suppress("DEPRECATION")
+            StaticLayout(text, paint, width, alignment, 1.2f, 0f, false)
+        }
+
     private fun fastBlur(
         sentBitmap: Bitmap,
         scale: Float,

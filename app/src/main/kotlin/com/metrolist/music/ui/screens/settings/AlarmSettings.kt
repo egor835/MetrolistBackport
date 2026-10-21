@@ -35,6 +35,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.core.content.getSystemService
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -45,7 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLocale
+import com.metrolist.music.ui.utils.currentPlatformLocale
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -73,7 +74,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun AlarmSettingsSection(showTitle: Boolean = true) {
     val context = LocalContext.current
-    val locale = LocalLocale.current.platformLocale
+    val locale = currentPlatformLocale
     val database = LocalDatabase.current
     val scope = rememberCoroutineScope()
     val playlists by database.playlistsByNameAsc().collectAsStateWithLifecycle(initialValue = emptyList())
@@ -87,16 +88,17 @@ fun AlarmSettingsSection(showTitle: Boolean = true) {
     var showEditor by remember { mutableStateOf(false) }
     var editorTarget by remember { mutableStateOf<MusicAlarmEntry?>(null) }
 
-    val alarmManager = context.getSystemService(AlarmManager::class.java)
+    val alarmManager = context.getSystemService<AlarmManager>()
     val canScheduleExact =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             alarmManager?.canScheduleExactAlarms() == true
         } else {
             true
         }
-    val powerManager = context.getSystemService(PowerManager::class.java)
+    val powerManager = context.getSystemService<PowerManager>()
     val ignoringBatteryOptimization =
-        powerManager?.isIgnoringBatteryOptimizations(context.packageName) == true
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
+            powerManager?.isIgnoringBatteryOptimizations(context.packageName) == true
     val systemItems = buildList {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !canScheduleExact) {
             add(
@@ -333,7 +335,7 @@ private fun AlarmEditorDialog(
     onSave: (MusicAlarmEntry) -> Unit
 ) {
     val context = LocalContext.current
-    val locale = LocalLocale.current.platformLocale
+    val locale = currentPlatformLocale
     val noPlaylistsText = stringResource(R.string.alarm_no_playlists)
     val selectPlaylistText = stringResource(R.string.alarm_select_playlist)
 

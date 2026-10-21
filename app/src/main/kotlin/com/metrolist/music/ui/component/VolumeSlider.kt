@@ -63,6 +63,8 @@ fun VolumeSlider(
     val interactionSource = remember { MutableInteractionSource() }
     val sliderState = rememberSliderState(value = value)
     sliderState.value = value
+    sliderState.onValueChange = onValueChange
+    sliderState.onValueChangeFinished = onValueChangeFinished
 
     val volumeOffIcon = painterResource(R.drawable.volume_off)
     val volumeMuteIcon = painterResource(R.drawable.volume_mute)
@@ -88,10 +90,8 @@ fun VolumeSlider(
 
     Slider(
         state = sliderState,
-        onValueChange = onValueChange,
         modifier = modifier,
         enabled = enabled,
-        onValueChangeFinished = onValueChangeFinished,
         colors = colors,
         interactionSource = interactionSource,
         track = { sliderState ->

@@ -43,7 +43,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.metrolist.music.LocalNavController
 import com.metrolist.music.LocalPlayerAwareWindowInsets
@@ -316,7 +316,7 @@ private fun NoEqualizationItem(
     onSelected: () -> Unit
 ) {
     ListItem(
-        content = {
+        headlineContent = {
             Text(
                 stringResource(R.string.eq_disabled),
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
@@ -344,7 +344,7 @@ private fun EQProfileItem(
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     ListItem(
-        content = {
+        headlineContent = {
             Text(
                 text = profile.deviceModel,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal

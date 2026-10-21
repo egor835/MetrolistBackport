@@ -35,7 +35,7 @@ fun PlayerSliderTrack(
     val activeTrackColor = colors.activeTrackColor
     val inactiveTickColor = colors.inactiveTickColor
     val activeTickColor = colors.activeTickColor
-    val valueRange = sliderState.trackRange
+    val valueRange = sliderState.valueRange
     Canvas(
         modifier
             .fillMaxWidth()

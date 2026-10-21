@@ -6,9 +6,11 @@ import android.graphics.drawable.Icon
 import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
+import androidx.annotation.RequiresApi
 import com.metrolist.music.R
 import com.metrolist.music.recognition.RecognitionLaunchActivity
 
+@RequiresApi(Build.VERSION_CODES.N)
 class MusicRecognizerTileService : TileService() {
     override fun onStartListening() {
         super.onStartListening()

@@ -100,7 +100,7 @@ class SilenceDetectorAudioProcessor(
 
     fun isCurrentlySilent(): Boolean = inSilence
 
-    override fun onFlush(streamMetadata: AudioProcessor.StreamMetadata) = clearSilenceState()
+    override fun onFlush() = clearSilenceState()
 
     override fun onReset() {
         sampleRate = 0

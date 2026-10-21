@@ -168,7 +168,7 @@ fun YouTubeAlbumMenu(
         ) {
             item {
                 ListItem(
-                    content = { Text(text = stringResource(R.string.already_in_playlist)) },
+                    headlineContent = { Text(text = stringResource(R.string.already_in_playlist)) },
                     leadingContent = {
                         Image(
                             painter = painterResource(R.drawable.close),

@@ -60,7 +60,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.offline.DownloadService
 import coil3.compose.AsyncImage
@@ -254,7 +254,7 @@ fun SongMenu(
         ) {
             item {
                 ListItem(
-                    content = { Text(text = stringResource(R.string.already_in_playlist)) },
+                    headlineContent = { Text(text = stringResource(R.string.already_in_playlist)) },
                     leadingContent = {
                         Image(
                             painter = painterResource(R.drawable.close),

@@ -2,7 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <uses-sdk tools:overrideLibrary="androidx.compose.material3, androidx.compose.material3.ripple, androidx.compose.foundation, androidx.compose.foundation.layout, androidx.compose.ui, androidx.compose.ui.geometry, androidx.compose.ui.graphics, androidx.compose.ui.text, androidx.compose.ui.unit, androidx.compose.ui.util, androidx.compose.animation, androidx.compose.animation.core, androidx.compose.runtime, androidx.compose.runtime.annotation, androidx.compose.runtime.retain, androidx.compose.runtime.saveable" />
+    <!-- innertubex declares minSdk 23 but uses no API above 21; its native quickjs dependency is
+         replaced with an API 21 build (see app/build.gradle.kts). -->
+    <uses-sdk tools:overrideLibrary="com.metrolist.innertubex" />
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -191,23 +193,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-
-        <activity
-            android:name=".discord.DiscordOAuthActivity"
-            android:exported="true"
-            android:launchMode="singleTask"
-            android:theme="@style/Theme.AppCompat.NoActionBar">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data android:scheme="metrolistdiscord" />
-                <data android:host="oauth2" />
-                <data android:pathPrefix="/callback" />
-            </intent-filter>
-        </activity>
 
         <provider
             android:name="androidx.core.content.FileProvider"

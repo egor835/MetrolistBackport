@@ -145,7 +145,7 @@ class CustomEqualizerAudioProcessor : BaseAudioProcessor() {
         }
     }
 
-    override fun onFlush(streamMetadata: AudioProcessor.StreamMetadata) {
+    override fun onFlush() {
         filters.forEach { it.reset() }
     }
 

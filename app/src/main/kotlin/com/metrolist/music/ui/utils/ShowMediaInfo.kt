@@ -55,7 +55,6 @@ import com.metrolist.music.ui.component.shimmer.ShimmerHost
 import com.metrolist.music.ui.component.shimmer.TextPlaceholder
 import com.metrolist.music.utils.ArtistNameAliases
 import com.metrolist.music.utils.rememberEnumPreference
-import androidx.compose.ui.platform.LocalLocale
 
 @Composable
 fun getLoudnessLevelLabel(loudnessLevel: LoudnessLevel): String {
@@ -171,7 +170,7 @@ fun ShowMediaInfo(videoId: String) {
                             stringResource(R.string.bitrate) to currentFormat?.bitrate?.let { "${it / 1000} Kbps" },
                             stringResource(R.string.sample_rate) to currentFormat?.sampleRate?.let { "$it Hz" },
                             stringResource(R.string.loudness) to measuredLufs?.let {
-                                String.format(LocalLocale.current.platformLocale, "%.2f dB", it - targetLufs)
+                                String.format(currentPlatformLocale, "%.2f dB", it - targetLufs)
                             },
                             stringResource(R.string.loudness_level) to getLoudnessLevelLabel(loudnessLevel),
                             stringResource(R.string.volume) to if (playerConnection != null) "${(playerConnection.player.volume * 100).toInt()}%" else null,

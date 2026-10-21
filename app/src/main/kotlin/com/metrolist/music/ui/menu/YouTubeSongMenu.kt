@@ -186,7 +186,7 @@ fun YouTubeSongMenu(
     }  
 
     ListItem(  
-        content = {
+        headlineContent = {
             Text(
                 text = song.title,
                 modifier = Modifier.basicMarquee(),

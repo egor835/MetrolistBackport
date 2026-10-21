@@ -7,7 +7,6 @@ package com.metrolist.music
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.ForegroundServiceStartNotAllowedException
 import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Intent
@@ -112,7 +111,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.core.util.Consumer
 import androidx.core.view.WindowCompat
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.coroutineScope
 import androidx.lifecycle.lifecycleScope
@@ -200,6 +199,7 @@ import com.metrolist.music.ui.theme.DefaultThemeColor
 import com.metrolist.music.ui.theme.MetrolistTheme
 import com.metrolist.music.ui.theme.extractThemeColor
 import com.metrolist.music.ui.utils.appBarScrollBehavior
+import com.metrolist.music.ui.utils.containerDpSize
 import com.metrolist.music.ui.utils.resetHeightOffset
 import com.metrolist.music.utils.ReleaseInfo
 import com.metrolist.music.utils.SearchRoutes
@@ -332,8 +332,6 @@ class MainActivity : FragmentActivity() {
                 } else {
                     startService(serviceIntent)
                 }
-            } catch (e: ForegroundServiceStartNotAllowedException) {
-                Timber.w(e, "Cannot start foreground service from background")
             } catch (e: IllegalStateException) {
                 Timber.w(e, "Failed to start foreground service")
             }

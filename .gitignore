@@ -1,6 +1,7 @@
 # Built application files
 *.apk
 *.aar
+!app/libs/quickjs-kt-android-*-api21.aar
 *.ap_
 *.aab
 

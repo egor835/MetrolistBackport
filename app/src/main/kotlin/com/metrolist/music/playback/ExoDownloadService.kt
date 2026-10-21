@@ -9,6 +9,7 @@ import android.app.Notification
 import android.app.PendingIntent
 import android.content.Intent
 import android.graphics.drawable.Icon
+import android.os.Build
 import androidx.media3.common.util.Util
 import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.offline.DownloadService
@@ -60,6 +61,9 @@ class ExoDownloadService : DownloadService(
                 downloads,
                 notMetRequirements
             )
+
+        // Rebuilding the notification with an extra action needs recoverBuilder (API 24).
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return progressNotification
 
         val cancelAction =
             Notification.Action.Builder(

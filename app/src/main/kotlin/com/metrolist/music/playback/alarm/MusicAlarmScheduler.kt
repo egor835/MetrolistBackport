@@ -5,6 +5,8 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import androidx.core.app.AlarmManagerCompat
+import androidx.core.content.getSystemService
 import com.metrolist.music.playback.MusicService
 import java.util.Calendar
 
@@ -15,7 +17,7 @@ object MusicAlarmScheduler {
     }
 
     fun scheduleAll(context: Context, alarms: List<MusicAlarmEntry>) {
-        val alarmManager = context.getSystemService(AlarmManager::class.java) ?: return
+        val alarmManager = context.getSystemService<AlarmManager>() ?: return
         val knownAlarmIds = (MusicAlarmStore.loadBlocking(context).map { it.id } + alarms.map { it.id }).distinct()
         knownAlarmIds.forEach { alarmId ->
             cancel(context, alarmId)
@@ -30,7 +32,7 @@ object MusicAlarmScheduler {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
                     alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
                 } else {
-                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+                    AlarmManagerCompat.setExactAndAllowWhileIdle(alarmManager, AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
                 }
                 alarm.copy(nextTriggerAt = triggerAtMillis)
             }
@@ -39,7 +41,7 @@ object MusicAlarmScheduler {
     }
 
     fun cancel(context: Context, alarmId: String) {
-        val alarmManager = context.getSystemService(AlarmManager::class.java) ?: return
+        val alarmManager = context.getSystemService<AlarmManager>() ?: return
         alarmManager.cancel(alarmPendingIntent(context, alarmId))
         alarmManager.cancel(legacyAlarmPendingIntent(context, alarmId))
     }
@@ -70,12 +72,12 @@ object MusicAlarmScheduler {
         alarmId: String,
         intent: Intent
     ): PendingIntent {
-        return PendingIntent.getForegroundService(
-            context,
-            requestCode(alarmId),
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            PendingIntent.getForegroundService(context, requestCode(alarmId), intent, flags)
+        } else {
+            PendingIntent.getService(context, requestCode(alarmId), intent, flags)
+        }
     }
 
     private fun legacyAlarmPendingIntent(context: Context, alarmId: String): PendingIntent {

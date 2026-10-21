@@ -1452,30 +1452,30 @@ fun BottomSheetPlayer(
                     val sliderValue = (sliderPosition ?: effectivePosition).toFloat()
                     val sliderRange = 0f..(if (duration == C.TIME_UNSET) 0f else duration.toFloat())
                     val sliderState = remember(sliderRange) {
-                        SliderState(value = sliderValue, trackRange = sliderRange)
+                        SliderState(value = sliderValue, valueRange = sliderRange)
                     }
                     sliderState.value = sliderValue
+                    sliderState.onValueChange = {
+                        if (!isListenTogetherGuest) {
+                            sliderPosition = it.toLong()
+                        }
+                    }
+                    sliderState.onValueChangeFinished = {
+                        if (!isListenTogetherGuest) {
+                            sliderPosition?.let {
+                                if (isCasting) {
+                                    castHandler?.seekTo(it)
+                                    lastManualSeekTime = System.currentTimeMillis()
+                                } else {
+                                    playerConnection.player.seekTo(it)
+                                }
+                                position = it
+                            }
+                            sliderPosition = null
+                        }
+                    }
                     Slider(
                         state = sliderState,
-                        onValueChange = {
-                            if (!isListenTogetherGuest) {
-                                sliderPosition = it.toLong()
-                            }
-                        },
-                        onValueChangeFinished = {
-                            if (!isListenTogetherGuest) {
-                                sliderPosition?.let {
-                                    if (isCasting) {
-                                        castHandler?.seekTo(it)
-                                        lastManualSeekTime = System.currentTimeMillis()
-                                    } else {
-                                        playerConnection.player.seekTo(it)
-                                    }
-                                    position = it
-                                }
-                                sliderPosition = null
-                            }
-                        },
                         enabled = !isListenTogetherGuest,
                         thumb = { Spacer(modifier = Modifier.size(0.dp)) },
                         track = { sliderState ->

@@ -2,7 +2,7 @@ package com.metrolist.music.playback
 
 import android.content.Context
 import android.net.Uri
-import androidx.media3.cast.RemoteCastPlayer
+import androidx.media3.cast.CastPlayer
 import androidx.media3.cast.SessionAvailabilityListener
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -57,7 +57,7 @@ class CastConnectionHandler(
         private set
 
     private var castContext: CastContext? = null
-    private var castPlayer: RemoteCastPlayer? = null
+    private var castPlayer: CastPlayer? = null
     private var positionJob: Job? = null
     private var loadJob: Job? = null
     private var extensionJob: Job? = null
@@ -127,11 +127,10 @@ class CastConnectionHandler(
     fun initialize(): Boolean {
         if (castPlayer != null) return true
         return runCatching {
-            castContext = CastContext.getSharedInstance(context)
+            val sharedCastContext = CastContext.getSharedInstance(context)
+            castContext = sharedCastContext
             castPlayer =
-                RemoteCastPlayer
-                    .Builder(context)
-                    .build()
+                CastPlayer(sharedCastContext)
                     .also { player ->
                         player.addListener(playerListener)
                         player.setSessionAvailabilityListener(sessionListener)

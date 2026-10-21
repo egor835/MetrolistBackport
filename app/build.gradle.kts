@@ -38,7 +38,7 @@ android {
 
     defaultConfig {
         applicationId = applicationIdOverride ?: baseApplicationId
-        minSdk = 23
+        minSdk = 21
         targetSdk = 36
         versionCode = 153
         versionName = "13.7.0"
@@ -61,7 +61,6 @@ android {
         buildConfigField("String", "LASTFM_API_KEY", "\"$lastFmKey\"")
         buildConfigField("String", "LASTFM_SECRET", "\"$lastFmSecret\"")
         buildConfigField("String", "ARCHITECTURE", "\"universal\"")
-        buildConfigField("Long", "DISCORD_APP_ID", "1447278780795064401L")
     }
 
     flavorDimensions += listOf("variant")
@@ -250,12 +249,17 @@ configurations.configureEach {
     exclude(group = "org.json", module = "json")
 }
 
+configurations.configureEach {
+    exclude(group = "io.github.dokar3", module = "quickjs-kt-android")
+}
+
 dependencies {
     implementation(libs.guava)
     implementation(libs.coroutines.guava)
 
     implementation(libs.activity)
     implementation(libs.hilt.navigation)
+    implementation(libs.navigation.compose)
     implementation(libs.datastore)
 
     implementation(libs.compose.runtime)
@@ -300,6 +304,9 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     implementation(project(":innertube"))
+    // innertubex's quickjs-kt ships native code built for API 23; this is the API 21 rebuild
+    // produced by scripts/build-quickjs-api21.sh (the published artifact is excluded below).
+    implementation(files("libs/quickjs-kt-android-1.0.15-api21.aar"))
 
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.okhttp)
