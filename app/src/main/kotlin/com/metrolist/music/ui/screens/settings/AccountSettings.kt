@@ -5,6 +5,10 @@
 
 package com.metrolist.music.ui.screens.settings
 
+import android.content.Context
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -68,6 +73,7 @@ import com.metrolist.music.ui.component.InfoLabel
 import com.metrolist.music.ui.component.Material3SettingsGroup
 import com.metrolist.music.ui.component.Material3SettingsItem
 import com.metrolist.music.ui.component.TextFieldDialog
+import com.metrolist.music.utils.CustomWebView
 import com.metrolist.music.utils.Updater
 import com.metrolist.music.utils.rememberPreference
 import com.metrolist.music.viewmodels.AccountSettingsViewModel
@@ -104,6 +110,7 @@ fun AccountSettings(
     var showToken by remember { mutableStateOf(false) }
     var showTokenEditor by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showWebViewEngine by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     Column(
@@ -317,8 +324,26 @@ fun AccountSettings(
 
         Spacer(Modifier.height(8.dp))
 
+        if (showWebViewEngine) {
+            WebViewEngineDialog(onDismiss = { showWebViewEngine = false })
+        }
+
         Material3SettingsGroup(
-            items = listOf(
+            items = listOfNotNull(
+                if (CustomWebView.isSupported) {
+                    Material3SettingsItem(
+                        title = { Text(stringResource(R.string.webview_engine)) },
+                        description = {
+                            Text(
+                                CustomWebView.installedVersion(context)
+                                    ?.let { stringResource(R.string.webview_engine_custom, it) }
+                                    ?: stringResource(R.string.webview_engine_system),
+                            )
+                        },
+                        icon = painterResource(R.drawable.language),
+                        onClick = { showWebViewEngine = true },
+                    )
+                } else null,
                 Material3SettingsItem(
                     title = {
                         Text(
@@ -431,4 +456,95 @@ fun AccountSettings(
             useLowContrast = true
         )
     }
+}
+
+@Composable
+private fun WebViewEngineDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var installing by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val installedVersion = remember { CustomWebView.installedVersion(context) }
+
+    val pickApk = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        installing = true
+        error = null
+        scope.launch {
+            CustomWebView.install(context, uri)
+                .onSuccess { restartApp(context) }
+                .onFailure {
+                    installing = false
+                    error = it.message ?: it.javaClass.simpleName
+                }
+        }
+    }
+
+    DefaultDialog(
+        onDismiss = { if (!installing) onDismiss() },
+        title = { Text(stringResource(R.string.webview_engine)) },
+        horizontalAlignment = Alignment.Start,
+        content = {
+            Column(
+                Modifier
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 18.dp),
+            ) {
+                Text(
+                    text = installedVersion
+                        ?.let { stringResource(R.string.webview_engine_custom, it) }
+                        ?: stringResource(R.string.webview_engine_system),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                if (installing) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(Modifier.size(24.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Text(stringResource(R.string.webview_engine_installing))
+                    }
+                }
+                error?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.webview_engine_failed, it),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.webview_engine_description),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        },
+        buttons = {
+            if (installedVersion != null) {
+                TextButton(
+                    enabled = !installing,
+                    onClick = {
+                        CustomWebView.reset(context)
+                        restartApp(context)
+                    },
+                ) {
+                    Text(stringResource(R.string.webview_engine_reset))
+                }
+            }
+            TextButton(
+                enabled = !installing,
+                onClick = { pickApk.launch(arrayOf("*/*")) },
+            ) {
+                Text(stringResource(R.string.webview_engine_choose))
+            }
+        },
+    )
+}
+
+private fun restartApp(context: Context) {
+    context.packageManager.getLaunchIntentForPackage(context.packageName)
+        ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        ?.let(context::startActivity)
+    Runtime.getRuntime().exit(0)
 }

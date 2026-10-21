@@ -994,4 +994,12 @@
     <string name="stream_source_web_creator_desc">Creator web client.</string>
     <string name="top_result">Top result</string>
     <string name="other">Other</string>
+    <string name="webview_engine">WebView engine</string>
+    <string name="webview_engine_system">System</string>
+    <string name="webview_engine_custom">Custom, version %1$s</string>
+    <string name="webview_engine_description">Google sign-in may not work with this phone\'s built-in WebView. Pick a newer WebView APK (Chromium 95 or older on Android 5) for Metrolist to use instead.</string>
+    <string name="webview_engine_choose">Choose APK</string>
+    <string name="webview_engine_reset">Use system WebView</string>
+    <string name="webview_engine_installing">Preparing WebView…</string>
+    <string name="webview_engine_failed">Couldn\'t use this APK: %1$s</string>
 </resources>
