@@ -1,351 +1,109 @@
-i'm just a larper with google gemini, don't take it seriously
+# Metrolist Backport
 
-<div align="center">
+Личный форк [Metrolist](https://github.com/MetrolistGroup/Metrolist), клиента YouTube Music, который работает на **Android 5.0+ (API 21)**. Оригинал требует Android 8.
 
-<img src="fastlane/metadata/android/en-US/images/icon.png" alt="Metrolist app icon" width="200" />
+Проверено на двух телефонах с Android 5.1.1 (armeabi-v7a): Sharp NP505SH (кнопочный, с системным WebView на Chromium 39) и Sony Xperia Z C6603. Работают главная, поиск, воспроизведение, тексты песен, медиа-уведомление и вход в аккаунт Google.
 
-# Metrolist
+## Что изменено относительно оригинала
 
-### YouTube Music client for Android
+### Понижение библиотек вместо `overrideLibrary`
 
-<br/>
+Новые AndroidX-библиотеки требуют minSdk 23 и выше. Если просто заглушить проверку через `tools:overrideLibrary`, приложение собирается, но падает: в Compose, Media3 и других библиотеках сотни вызовов API 22–23 без проверки версии. Поэтому все зависимости откачены до последних версий с поддержкой minSdk 21:
 
-<a href="https://www.blacksmith.sh">
-  <img src="assets/blacksmith-powered.png" alt="CI powered by Blacksmith" width="280" />
-</a>
+| Библиотека | Версия |
+|---|---|
+| Compose | 1.9.5 |
+| Material3 | 1.5.0-alpha01 (последняя с expressive-компонентами и minSdk 21) |
+| Media3 | 1.8.1 |
+| Lifecycle | 2.9.4 |
+| Activity | 1.11.0 |
+| Navigation | 2.9.8 |
+| Room | 2.7.2 |
+| DataStore | 1.1.7 |
+| Coil | 3.4.0 |
+| AppCompat | 1.7.1 |
+| Browser | 1.9.0 |
+| Cast framework | 22.1.0 |
+| Hilt Navigation | 1.2.0 |
+| reorderable | 3.0.0 |
+| material-kolor | 4.0.5 |
 
-<br/>
-<br/>
+Код приложения переписан под старые API этих версий. Новые API Compose/Android заменены бэкпортами: `ui/utils/WindowInfoUtils.kt`, `ui/utils/LocaleUtils.kt`, `ContextCompat`/`ServiceCompat`/`AlarmManagerCompat`, проверки `SDK_INT`. Lint `NewApi` при minSdk 21 чистый.
 
-[![Latest release](https://img.shields.io/github/v/release/MetrolistGroup/Metrolist?style=for-the-badge&labelColor=0d1117)](https://github.com/MetrolistGroup/Metrolist/releases)
-[![License](https://img.shields.io/github/license/MetrolistGroup/metrolist?style=for-the-badge&labelColor=0d1117)](https://github.com/MetrolistGroup/Metrolist/blob/main/LICENSE)
-[![Downloads](https://img.shields.io/github/downloads/MetrolistGroup/Metrolist/total?style=for-the-badge&labelColor=0d1117)](https://github.com/MetrolistGroup/Metrolist/releases)
+`overrideLibrary` остался только для `com.metrolist.innertubex`. Сканирование её байткода показало, что вызовов API выше 21 там нет.
 
-<br/>
+### Пересобранный QuickJS
 
-[![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white&labelColor=0d1117)](https://dsc.gg/metrolist)
-[![Telegram](https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white&labelColor=0d1117)](https://t.me/metrolistapp)
+Опубликованный `quickjs-kt-android` 1.0.15 собран под API 23 и импортирует `__register_atfork`, которого нет в libc Android 5, поэтому на 5.x библиотека не загружается. В `app/libs/quickjs-kt-android-1.0.15-api21.aar` лежит та же версия, пересобранная под API 21: Java/Kotlin-классы оригинальные, заменены только `.so`. Оригинальный артефакт исключён в `app/build.gradle.kts`.
 
-<br/>
+### Свой движок WebView на Android 5.x
 
-[**Download**](#download-now) · [**Features**](#features) · [**Translate**](#translations) · [**FAQ**](#faq) · [**Support**](#support-the-project)
+На Android 5 системный WebView зашит в прошивку и часто не обновляется, а страница входа Google на старом Chromium показывает «Something went wrong». `utils/CustomWebView.kt` позволяет подсунуть приложению WebView из APK-файла. Он работает только внутри Metrolist, на систему не влияет.
 
-</div>
+Как это работает: при старте приложения, до создания первого WebView, загрузчик создаёт ClassLoader для выбранного APK и сам ставит `WebViewFactory.sProviderInstance`, повторяя то, что делает фреймворк на API 21/22. Файлы хранятся в `files/webview/` приложения. Если APK не загрузится, приложение молча работает на системном WebView.
 
-> [!WARNING]
-> # MAINTENANCE MODE
-> Metrolist is currently in maintenance mode. This means we will only be fixing bugs and making minor improvements. Please do not submit PRs for new features or major changes, as they will not be accepted.  
-> The app is **NOT** dead, please stay tuned for updates on our discord (found above).
+Кроме входа, новый движок чинит генерацию PoToken (YouTube), которая на старом WebView отключается.
 
-> [!WARNING]
-> **Regional Restriction** - If YouTube Music is unavailable in your region, this app will not work without a **VPN or proxy** connecting to a supported region.
+### Удалено
 
----
+- **Интеграция с Discord (Rich Presence)**. Строки в `metrolist_strings.xml` и переводах остались, они ни на что не влияют.
 
-<div align="center">
+## Как пользоваться
 
-<h1><a id="screenshots"></a>Screenshots</h1>
+1. Поставь APK (см. «Сборка»).
+2. **Только Android 5.x, если вход в Google не работает:**
+   1. Скачай WebView на Chromium **95 или старше**: 95 — последняя версия с поддержкой Android 5. Проверенный вариант — [Bromite SystemWebView 95.0.4638.79](https://github.com/bromite/bromite/releases/tag/95.0.4638.79). Выбери файл под свою архитектуру:
+      - `arm_SystemWebView.apk` для 32-битного ARM;
+      - `arm64_SystemWebView.apk` для 64-битного;
+      - x86/x64 для эмуляторов.
+   2. Положи APK на телефон, например в `Download`.
+   3. В Metrolist нажми на иконку аккаунта справа вверху, затем «WebView engine» → «Choose APK» и выбери файл.
+   4. Подготовка занимает до минуты на старом железе: копирование, распаковка библиотек, компиляция dex. Потом приложение перезапустится, а в пункте будет написано «Custom, version …».
+   5. Войди через «Login» как обычно.
+   6. Вернуть системный WebView можно там же, кнопкой «Use system WebView».
 
-<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_1.png" alt="Home screen" width="30%" />
-<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_2.png" alt="Artist screen" width="30%" />
-<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_3.png" alt="Recognize music screen" width="30%" />
-<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_4.png" alt="Listen together screen" width="30%" />
-<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_5.png" alt="Player screen" width="30%" />
-<img src="fastlane/metadata/android/en-US/images/screenshots/screenshot_6.png" alt="Player lyrics screen" width="30%" />
+   > Bromite заброшен с 2023 года, а Chromium 95 вышел в 2021-м и содержит известные уязвимости. Внутри Metrolist он открывает только страницы Google и YouTube. Этот же APK не стоит использовать как браузер.
 
-</div>
+   Если вход и через новый движок не работает, есть ручной вариант. Войди в Metrolist на другом устройстве, скопируй токен (окно аккаунта → «Tap to show token») и вставь его через «Log in with token».
 
----
+### Ограничения на Android 5
 
-<div align="center">
+- Не работает автопродолжение воспроизведения при подключении Bluetooth-устройства: нужного API нет до Android 6.
+- В уведомлении о загрузке нет кнопки отмены до Android 7.
+- На медленных телефонах предзагрузка расшифровщика подписи YouTube может не уложиться в 30 секунд. Лимит зашит в innertubex, в логе это выглядит как `EJS solve failed ... QuickJsInterruptedException`. Сейчас это ни на что не влияет: потоки отдаёт клиент, которому подпись не нужна.
+- Встроенный апдейтер (варианты `foss` и `gms`) смотрит релизы **оригинального** Metrolist. Они требуют Android 8 и на этот форк не встанут, так что его предложения обновиться надо игнорировать. В варианте `izzy` апдейтера нет.
+- Интерфейс местами подтормаживает на железе 2012–2013 годов.
 
-<h1><a id="features"></a>Features</h1>
+## Сборка
 
-<table>
-  <tr>
-    <td width="50%" valign="top">
+Нужны JDK 21 (подойдёт JBR из Android Studio) и Android SDK. NDK не нужен: пересобранный QuickJS уже лежит в репозитории.
 
-#### Playback
-- Stream any song or video from YouTube Music
-- Background playback
-- Download & cache for offline use
-- Skip silence
-- Sleep timer
-
-</td>
-    <td width="50%" valign="top">
-
-#### Audio
-- Audio normalization
-- Tempo & pitch control
-- Equalizer
-- Crossfade
-
-</td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-
-#### Lyrics & Discovery
-- Live synced lyrics
-- AI-powered lyrics translation
-- Personalized quick picks
-- Search songs, albums, artists, videos, and playlists
-
-</td>
-    <td width="50%" valign="top">
-
-#### Library & Account
-- Full library management
-- Local playlists
-- Import playlists
-- Reorder songs in playlist or queue
-- YouTube Music account login
-- Sync songs, artists, albums, and playlists
-
-</td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-
-#### Social
-- Listen together with friends in real-time
-- Last.fm integration for scrobbling
-- Safe Discord Rich Presence
-
-</td>
-    <td width="50%" valign="top">
-
-#### Interface
-- Home screen widget
-- Light / Dark / Black / Dynamic theme modes
-- Dynamic color + 19 preset color palettes
-- Built with Material 3
-
-</td>
-  </tr>
-</table>
-
-</div>
-
----
-
-<div align="center">
-
-<h1><a id="download-now"></a>Download Now</h1>
-
-<h2>Stable Release</h2>
-
-<table>
-  <tr>
-    <th align="center">Obtainium</th>
-    <th align="center">IzzyOnDroid</th>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/MetrolistGroup/Metrolist/">
-        <img src="assets/badges/obtainium.svg" alt="Add Metrolist to Obtainium" height="100">
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://apt.izzysoft.de/fdroid/index/apk/com.metrolist.music">
-        <img src="assets/badges/izzyondroid.svg" alt="Get Metrolist on IzzyOnDroid" height="100">
-      </a>
-    </td>
-  </tr>
-  <tr>
-    <th align="center">OpenAPK</th>
-    <th align="center">GitHub</th>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://www.openapk.net/metrolist/com.metrolist.music/">
-        <img src="assets/badges/openapk.svg" alt="Get Metrolist on OpenAPK" height="100">
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://github.com/MetrolistGroup/Metrolist/releases/latest/download/Metrolist.apk">
-        <img src="assets/badges/github-stable.svg" alt="Get the stable Metrolist release on GitHub" height="100">
-      </a>
-    </td>
-  </tr>
-</table>
-
-<h2>Nightly Build</h2>
-
-<table>
-  <tr>
-    <th align="center">GitHub</th>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/MetrolistGroup/Metrolist/releases/download/nightly/Metrolist-with-Google-Cast.apk">
-        <img src="assets/badges/github-nightly.svg" alt="Get the Metrolist nightly build on GitHub" height="120">
-      </a>
-    </td>
-  </tr>
-</table>
-
-</div>
-
----
-
-<div align="center">
-
-<h1><a id="faq"></a>FAQ</h1>
-
-<h3>Got questions? Check out our <a href="https://metrolist.cc/#faq">FAQ page</a> for answers to the most common ones.</h3>
-
-</div>
-
----
-
-<div align="center">
-
-<h1><a id="translations"></a>Translations</h1>
-
-[![Translation status](https://img.shields.io/weblate/progress/metrolist?style=for-the-badge&labelColor=0d1117)](https://hosted.weblate.org/engage/metrolist/)
-
-<h3>We use Weblate to translate Metrolist. <a href="https://hosted.weblate.org/projects/Metrolist/">Help us bring Metrolist to more people!</a></h3>
-
-<a href="https://hosted.weblate.org/projects/Metrolist/">
-  <img src="https://hosted.weblate.org/widget/Metrolist/horizontal-auto.svg" alt="Translation status" />
-</a>
-
-<h3>Thank you! Every translation makes Metrolist a little more accessible to someone, somewhere in the world.</h3>
-
-</div>
-
----
-
-<div align="center">
-
-<h1><a id="support-the-project"></a>Support the Project</h1>
-
-<h3>Metrolist is free and open-source. If it brings you joy, consider supporting its development!</h3>
-
-#### Monero (XMR)
-
-<img src="assets/XMR.png" alt="Monero QR code" width="150" />
-
-```text
-44XjSELSWcgJTZiCKzjpCQWyXhokrH9RqH3rpp35FkSKi57T25hniHWHQNhLeXyFn3DDYqufmfRB1iEtENerZpJc7xJCcqt
+```bash
+./gradlew :app:assembleFossDebug   # без Google Cast, с апдейтером
+./gradlew :app:assembleGmsDebug    # с Google Cast
+./gradlew :app:assembleIzzyDebug   # без Cast и без апдейтера
 ```
 
-#### Buy Me a Coffee
+APK появится в `app/build/outputs/apk/<вариант>/debug/app-<вариант>-debug.apk`. Он универсальный: все ABI в одном файле, около 50 МБ.
 
-<a href="https://www.buymeacoffee.com/mostafaalagamy">
-  <img src="assets/buymeacoffee.png" alt="Buy Me a Coffee" width="150" />
-</a>
+Нюансы:
 
-</div>
+- **Debug-сборка ставится рядом** с обычной: пакет `com.metrolist.music.debug`, название «Metrolist Debug». Подписывается `app/persistent-debug.keystore`, если такой файл есть, иначе `~/.android/debug.keystore`. Ключ должен быть один и тот же от сборки к сборке, иначе обновление поверх не встанет.
+- **Release** (`assembleFossRelease`) собирается с R8, но подписи в конфиге нет: ключ берётся из `keystore/release.keystore` и переменных `STORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`. Для личного использования проще ставить debug.
+- **Пересборка QuickJS** нужна, только если поднимаешь версию `quickjs-kt` (её тянет innertubex). Понадобятся NDK r28c и CMake:
+  ```bash
+  ANDROID_NDK_HOME=/path/to/ndk CMAKE=/path/to/cmake scripts/build-quickjs-api21.sh
+  ```
+  Скрипт скачивает исходники нужного тега и оригинальный AAR, пересобирает `libquickjs.so` под API 21 для всех ABI и кладёт результат в `app/libs/`. Затем поправь имя файла в `app/build.gradle.kts`. В `.gitignore` для этого AAR есть исключение, потому что `*.aar` игнорируется глобально.
+- **Юнит-тесты:** `./gradlew :app:testFossDebugUnitTest`. Тест `PodcastEnrichmentTest` в `innertube` иногда падает из-за сети; при повторном запуске проходит.
 
----
+### Если подтягиваешь изменения из оригинала
 
-<div align="center">
+- Не поднимай версии из таблицы выше. Renovate/апстрим будут предлагать новые, а они требуют minSdk 23+. Если апстрим начал использовать новое API, его надо портировать вниз.
+- После слияния проверь lint: `./gradlew :app:lintFossDebug` и найди `NewApi` в `app/build/reports/lint-results-fossDebug.html`. Должно быть 0.
+- Код Discord будет возвращаться конфликтами, в основном в `MusicService`. Его надо удалять.
+- Проверь в манифесте, что новые библиотеки не требуют minSdk выше 21. Сборка на это ругнётся сама, и правильный ответ — откатить библиотеку, а не добавлять её в `overrideLibrary`.
 
-<h1>Special Thanks</h1>
+## Лицензия
 
-<h3>Metrolist stands on the shoulders of incredible open-source work.</h3>
-
-<h3>Main Inspirations</h3>
-
-<table>
-  <thead>
-    <tr>
-      <th align="center">Project</th>
-      <th align="center">Authors</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td align="center"><strong>InnerTune</strong></td>
-      <td align="center"><a href="https://github.com/z-huang">Zion Huang</a> · <a href="https://github.com/Malopieds">Malopieds</a></td>
-    </tr>
-    <tr>
-      <td align="center"><strong>OuterTune</strong></td>
-      <td align="center"><a href="https://github.com/DD3Boh">Davide Garberi</a> · <a href="https://github.com/mikooomich">Michael Zh</a></td>
-    </tr>
-  </tbody>
-</table>
-
-<h3>Libraries & Integrations</h3>
-
-<table>
-  <thead>
-    <tr>
-      <th align="center">Project</th>
-      <th align="center">Contribution</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td align="center"><a href="https://better-lyrics.boidu.dev"><strong>Better Lyrics</strong></a></td>
-      <td>Time-synced lyrics with word-by-word highlighting & YouTube Music integration</td>
-    </tr>
-    <tr>
-      <td align="center"><a href="https://github.com/MetrolistGroup/metroserver"><strong>metroserver</strong></a></td>
-      <td>Listen-together real-time backend</td>
-    </tr>
-    <tr>
-      <td align="center"><a href="https://github.com/aleksey-saenko/MusicRecognizer"><strong>MusicRecognizer</strong></a></td>
-      <td>Music recognition feature & Shazam API integration</td>
-    </tr>
-    <tr>
-      <td align="center"><a href="https://github.com/ZemerTeam/zemer-cipher"><strong>zemer-cipher</strong></a></td>
-      <td>YouTube cipher deobfuscation and PoToken generation</td>
-    </tr>
-    <tr>
-      <td align="center"><a href="https://www.blacksmith.sh"><strong>Blacksmith</strong></a></td>
-      <td>High-performance GitHub Actions runners powering our CI</td>
-    </tr>
-  </tbody>
-</table>
-
-<br/>
-
-<a href="https://www.blacksmith.sh">
-  <img src="assets/blacksmith-powered.png" alt="CI powered by Blacksmith" width="280" />
-</a>
-
-<h3>We also thank the entire open-source community! For every library, tool, and API that powers this project.</h3>
-
-</div>
-
----
-
-<div align="center">
-
-<h1>Contributors</h1>
-
-<h3>This project wouldn't exist without these amazing people!</h3>
-
-<a href="https://github.com/MetrolistGroup/Metrolist/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=MetrolistGroup/Metrolist" alt="Contributors" />
-</a>
-
-</div>
-
----
-
-<div align="center">
-
-<h1>Disclaimer</h1>
-
-This project is **not affiliated with, funded, authorized, endorsed by, or in any way associated** with YouTube, Google LLC, Metrolist Group LLC, or any of their affiliates and subsidiaries.
-
-All trademarks, service marks, and intellectual property rights referenced in this project belong to their respective owners.
-
-</div>
-
----
-
-<div align="center">
-
-<br/>
-
-**Made with ❤️ by [Mo Agamy](https://github.com/mostafaalagamy)**
-
-**This project stands with Palestine 🇵🇸**
-
-</div>
+GPL-3.0, как и оригинал. Оригинальный проект: [MetrolistGroup/Metrolist](https://github.com/MetrolistGroup/Metrolist).
